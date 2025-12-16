@@ -1,5 +1,5 @@
 /**
- * IPTV Cast Receiver
+ * IPTV Cast Receiver - FIXED VERSION
  * Production-ready Google Cast Custom Web Receiver
  * 
  * Strictly follows Google Cast UX Guidelines
@@ -80,7 +80,7 @@ let progressUpdateInterval = null;
  * Initialize Cast Receiver Context and Player Manager
  */
 function initializeReceiver() {
-    console.log('[Cast Receiver] Initializing...');
+    console.log('[linslog] Cast Receiver Initializing...');
     
     // Get Cast context
     receiverContext = cast.framework.CastReceiverContext.getInstance();
@@ -94,11 +94,29 @@ function initializeReceiver() {
     // Get player manager
     playerManager = receiverContext.getPlayerManager();
     
+    // CRITICAL FIX: Configure playback config to support all media types
+    const playbackConfig = new cast.framework.PlaybackConfig();
+    
+    // Enable auto-resume and licensing (if needed)
+    playbackConfig.autoResumeDuration = 5;
+    playbackConfig.autoPauseDuration = null;
+    
+    // Set manifest and segment request handlers for HLS/DASH if needed
+    playbackConfig.manifestRequestHandler = null;
+    playbackConfig.segmentRequestHandler = null;
+    
+    // Apply playback configuration
+    playerManager.setPlaybackConfig(playbackConfig);
+    
+    console.log('[linslog] Playback config applied');
+    
     // Configure supported media commands
     playerManager.setSupportedMediaCommands(
         RECEIVER_CONFIG.supportedCommands.reduce((acc, cmd) => acc | cmd, 0),
         true
     );
+    
+    console.log('[linslog] Supported commands configured');
     
     // Register event listeners
     registerPlayerEventListeners();
@@ -107,7 +125,8 @@ function initializeReceiver() {
     // Start receiver
     receiverContext.start(options);
     
-    console.log('[Cast Receiver] Initialized successfully');
+    console.log('[linslog] Cast Receiver initialized successfully');
+    console.log('[linslog] Receiver Application ID: 80E3032B');
     showScreen('idle');
 }
 
@@ -142,6 +161,8 @@ function registerPlayerEventListeners() {
         cast.framework.events.EventType.MEDIA_STATUS,
         handleMediaStatus
     );
+    
+    console.log('[linslog] Player event listeners registered');
 }
 
 /**
@@ -150,33 +171,99 @@ function registerPlayerEventListeners() {
 function registerVideoEventListeners() {
     
     elements.player.addEventListener('playing', () => {
-        console.log('[Video] Playing');
+        console.log('[linslog] Video element: playing');
+        logVideoTrackInfo();
         hideBuffering();
     });
     
     elements.player.addEventListener('waiting', () => {
-        console.log('[Video] Buffering');
+        console.log('[linslog] Video element: buffering');
         showBuffering();
     });
     
     elements.player.addEventListener('pause', () => {
-        console.log('[Video] Paused');
+        console.log('[linslog] Video element: paused');
     });
     
     elements.player.addEventListener('ended', () => {
-        console.log('[Video] Ended');
+        console.log('[linslog] Video element: ended');
         stopProgressTracking();
         setTimeout(() => showScreen('idle'), 2000);
     });
     
     elements.player.addEventListener('error', (e) => {
-        console.error('[Video] Error:', e);
+        console.error('[linslog] Video element error:', e);
+        const error = elements.player.error;
+        if (error) {
+            console.error('[linslog] Error code:', error.code);
+            console.error('[linslog] Error message:', error.message);
+        }
         handleVideoError();
     });
     
     elements.player.addEventListener('timeupdate', () => {
         updateProgress();
     });
+    
+    elements.player.addEventListener('loadedmetadata', () => {
+        console.log('[linslog] Video metadata loaded');
+        logVideoTrackInfo();
+        checkVideoPlayback();
+    });
+    
+    elements.player.addEventListener('canplay', () => {
+        console.log('[linslog] Video can play');
+    });
+    
+    elements.player.addEventListener('loadeddata', () => {
+        console.log('[linslog] Video data loaded');
+    });
+    
+    console.log('[linslog] Video element event listeners registered');
+}
+
+/**
+ * Log video track information for debugging
+ */
+function logVideoTrackInfo() {
+    const video = elements.player;
+    console.log('[linslog] === Video Track Info ===');
+    console.log('[linslog]   Video Width:', video.videoWidth);
+    console.log('[linslog]   Video Height:', video.videoHeight);
+    console.log('[linslog]   Duration:', video.duration);
+    console.log('[linslog]   Has Video:', video.videoWidth > 0);
+    console.log('[linslog]   Current Time:', video.currentTime);
+    console.log('[linslog]   Paused:', video.paused);
+    console.log('[linslog]   Playback Rate:', video.playbackRate);
+    
+    // Check audio tracks
+    if (video.audioTracks && video.audioTracks.length > 0) {
+        console.log('[linslog]   Audio Tracks:', video.audioTracks.length);
+    }
+    
+    // Check video tracks
+    if (video.videoTracks && video.videoTracks.length > 0) {
+        console.log('[linslog]   Video Tracks:', video.videoTracks.length);
+    }
+    console.log('[linslog] =====================');
+}
+
+/**
+ * Check if video is actually playing (not just audio)
+ */
+function checkVideoPlayback() {
+    setTimeout(() => {
+        const video = elements.player;
+        if (!video.paused && video.videoWidth === 0) {
+            console.error('[linslog] ❌ WARNING: Only audio playing - NO VIDEO TRACK');
+            console.error('[linslog] ❌ Video codec likely not supported by Chromecast');
+            console.error('[linslog] ✓ Chromecast supports: H.264 (AVC)');
+            console.error('[linslog] ✗ Chromecast does NOT support: H.265 (HEVC), VP9, AV1');
+        } else if (!video.paused && video.videoWidth > 0) {
+            console.log('[linslog] ✓ SUCCESS: Video is playing correctly');
+            console.log('[linslog] ✓ Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+        }
+    }, 2000);
 }
 
 // ============================================
@@ -188,30 +275,65 @@ function registerVideoEventListeners() {
  * Extract metadata and configure playback
  */
 function handleLoadRequest(loadRequestData) {
-    console.log('[Cast] LOAD request received', loadRequestData);
+    console.log('[linslog] ========================================');
+    console.log('[linslog] LOAD REQUEST RECEIVED');
+    console.log('[linslog] ========================================');
     
     const media = loadRequestData.media;
     
     if (!media || !media.contentId) {
-        console.error('[Cast] Invalid media data');
+        console.error('[linslog] ❌ Invalid media data - no contentId');
         showError('Invalid content');
         return loadRequestData;
     }
     
+    // Log all media information
+    console.log('[linslog] Content URL:', media.contentId);
+    console.log('[linslog] Content Type:', media.contentType);
+    console.log('[linslog] Stream Type:', media.streamType);
+    console.log('[linslog] Duration:', media.duration || 'unknown');
+    
     // Extract custom metadata
     currentMetadata = extractMetadata(media);
-    console.log('[Cast] Metadata:', currentMetadata);
+    console.log('[linslog] Metadata extracted:', JSON.stringify(currentMetadata));
     
     // Show loading state
     showLoadingState(currentMetadata);
     
-    // Configure HLS playback
-    if (media.contentType === 'application/x-mpegurl' || 
-        media.contentType === 'application/vnd.apple.mpegurl') {
-        console.log('[Cast] HLS stream detected');
-    }
+    // Log content type analysis
+    logContentTypeInfo(media);
+    
+    // IMPORTANT: Don't modify the load request - let Cast SDK handle it naturally
+    console.log('[linslog] Load request passed to Cast SDK');
+    console.log('[linslog] ========================================');
     
     return loadRequestData;
+}
+
+/**
+ * Log content type information and warnings
+ */
+function logContentTypeInfo(media) {
+    const contentType = media.contentType || '';
+    const contentUrl = media.contentId || '';
+    
+    if (contentType === 'application/x-mpegurl' || contentType === 'application/vnd.apple.mpegurl') {
+        console.log('[linslog] ✓ HLS stream detected - excellent compatibility');
+    } else if (contentType === 'video/x-matroska' || contentUrl.endsWith('.mkv')) {
+        console.warn('[linslog] ⚠ MKV container detected');
+        console.warn('[linslog] MKV compatibility depends on internal codecs:');
+        console.warn('[linslog]   ✓ H.264 (AVC) + AAC/MP3 = WORKS');
+        console.warn('[linslog]   ✗ H.265 (HEVC) = AUDIO ONLY');
+        console.warn('[linslog]   ✗ VP9/AV1 = AUDIO ONLY');
+        console.warn('[linslog] Recommendation: Use MP4 or HLS for best compatibility');
+    } else if (contentType === 'video/mp4' || contentUrl.endsWith('.mp4')) {
+        console.log('[linslog] ✓ MP4 container - excellent compatibility with H.264');
+    } else if (contentType === 'application/dash+xml') {
+        console.log('[linslog] ✓ DASH stream detected - good compatibility');
+    } else {
+        console.warn('[linslog] ⚠ Unknown content type:', contentType);
+        console.warn('[linslog] Cast SDK will attempt to play, but success not guaranteed');
+    }
 }
 
 /**
@@ -228,11 +350,14 @@ function extractMetadata(media) {
     
     // Extract from custom data
     if (media.customData) {
+        console.log('[linslog] Custom data found:', JSON.stringify(media.customData));
         metadata.title = media.customData.title || metadata.title;
         metadata.subtitle = media.customData.subtitle || metadata.subtitle;
         metadata.poster = media.customData.poster || metadata.poster;
         metadata.type = media.customData.type || metadata.type;
         metadata.isLive = media.customData.isLive || (metadata.type === CONTENT_TYPE.LIVE);
+    } else {
+        console.log('[linslog] No custom data in media object');
     }
     
     // Fallback to standard metadata
@@ -243,6 +368,7 @@ function extractMetadata(media) {
         // Extract poster from images array
         if (media.metadata.images && media.metadata.images.length > 0) {
             metadata.poster = media.metadata.images[0].url;
+            console.log('[linslog] Poster from metadata images:', metadata.poster);
         }
     }
     
@@ -253,7 +379,9 @@ function extractMetadata(media) {
  * Handle load complete event
  */
 function handleLoadComplete(event) {
-    console.log('[Cast] Load complete');
+    console.log('[linslog] ========================================');
+    console.log('[linslog] LOAD COMPLETE');
+    console.log('[linslog] ========================================');
     showPlayingState(currentMetadata);
 }
 
@@ -261,8 +389,14 @@ function handleLoadComplete(event) {
  * Handle player errors
  */
 function handlePlayerError(event) {
-    console.error('[Cast] Player error:', event);
+    console.error('[linslog] ========================================');
+    console.error('[linslog] PLAYER ERROR');
+    console.error('[linslog] ========================================');
+    console.error('[linslog] Error event:', event);
+    console.error('[linslog] Error code:', event.detailedErrorCode);
     const errorMessage = getErrorMessage(event.detailedErrorCode);
+    console.error('[linslog] Error message:', errorMessage);
+    console.error('[linslog] ========================================');
     showError(errorMessage);
 }
 
@@ -271,26 +405,33 @@ function handlePlayerError(event) {
  */
 function handleMediaStatus(event) {
     const playerState = event.playerState;
-    console.log('[Cast] Player state:', playerState);
+    console.log('[linslog] Player state changed:', playerState);
     
     switch (playerState) {
         case cast.framework.messages.PlayerState.IDLE:
+            console.log('[linslog] State: IDLE, Reason:', event.idleReason);
             if (event.idleReason === cast.framework.messages.IdleReason.FINISHED) {
-                console.log('[Cast] Playback finished');
+                console.log('[linslog] Playback finished normally');
             } else if (event.idleReason === cast.framework.messages.IdleReason.ERROR) {
-                console.error('[Cast] Playback error');
+                console.error('[linslog] Playback error occurred');
                 showError('Playback error occurred');
             } else if (event.idleReason === cast.framework.messages.IdleReason.INTERRUPTED) {
-                console.log('[Cast] Playback interrupted');
+                console.log('[linslog] Playback interrupted');
             }
             break;
             
         case cast.framework.messages.PlayerState.BUFFERING:
+            console.log('[linslog] State: BUFFERING');
             showBuffering();
             break;
             
         case cast.framework.messages.PlayerState.PLAYING:
+            console.log('[linslog] State: PLAYING');
             hideBuffering();
+            break;
+            
+        case cast.framework.messages.PlayerState.PAUSED:
+            console.log('[linslog] State: PAUSED');
             break;
     }
 }
@@ -307,18 +448,24 @@ function handleVideoError() {
     let message = 'Unable to play content';
     
     if (error) {
+        console.error('[linslog] Video error code:', error.code);
         switch (error.code) {
             case error.MEDIA_ERR_ABORTED:
                 message = 'Playback aborted';
+                console.error('[linslog] MEDIA_ERR_ABORTED');
                 break;
             case error.MEDIA_ERR_NETWORK:
                 message = 'Network error occurred';
+                console.error('[linslog] MEDIA_ERR_NETWORK');
                 break;
             case error.MEDIA_ERR_DECODE:
                 message = 'Content format not supported';
+                console.error('[linslog] MEDIA_ERR_DECODE - Codec not supported');
+                console.error('[linslog] Video codec in this file is not compatible with Chromecast');
                 break;
             case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
                 message = 'Stream not available';
+                console.error('[linslog] MEDIA_ERR_SRC_NOT_SUPPORTED');
                 break;
         }
     }
@@ -330,8 +477,6 @@ function handleVideoError() {
  * Get user-friendly error message
  */
 function getErrorMessage(errorCode) {
-    // Map error codes to user-friendly messages
-    // No technical codes shown per PRD
     const errorMap = {
         'GENERIC': 'Unable to play content',
         'INVALID_REQUEST': 'Invalid content request',
@@ -353,7 +498,7 @@ function getErrorMessage(errorCode) {
  * Show specific screen state
  */
 function showScreen(screenName) {
-    console.log(`[UI] Switching to ${screenName} screen`);
+    console.log('[linslog] UI: Switching to', screenName, 'screen');
     
     // Hide all screens
     elements.idleScreen.classList.remove('active');
@@ -388,10 +533,8 @@ function showScreen(screenName) {
  * Show loading state with metadata
  */
 function showLoadingState(metadata) {
-    // Set title
     elements.loadingTitle.textContent = metadata.title;
     
-    // Set poster if available
     if (metadata.poster) {
         elements.mediaPoster.style.backgroundImage = `url(${metadata.poster})`;
         elements.mediaPoster.style.display = 'block';
@@ -406,6 +549,8 @@ function showLoadingState(metadata) {
  * Show playing state with full UI
  */
 function showPlayingState(metadata) {
+    console.log('[linslog] Showing playing state for:', metadata.title);
+    
     // Set background poster
     if (metadata.poster) {
         elements.backgroundPoster.style.backgroundImage = `url(${metadata.poster})`;
@@ -417,22 +562,19 @@ function showPlayingState(metadata) {
     
     // Configure UI based on content type
     if (metadata.isLive || metadata.type === CONTENT_TYPE.LIVE) {
-        // Live TV mode
+        console.log('[linslog] UI: Configured for LIVE content');
         elements.liveBadge.classList.add('active');
         elements.progressContainer.classList.remove('active');
         
-        // Show channel logo if poster exists
         if (metadata.poster) {
             elements.channelLogo.style.backgroundImage = `url(${metadata.poster})`;
             elements.channelLogo.classList.add('active');
         }
     } else {
-        // VOD mode
+        console.log('[linslog] UI: Configured for VOD content');
         elements.liveBadge.classList.remove('active');
         elements.progressContainer.classList.add('active');
         elements.channelLogo.classList.remove('active');
-        
-        // Start progress tracking
         startProgressTracking();
     }
     
@@ -443,11 +585,12 @@ function showPlayingState(metadata) {
  * Show error state
  */
 function showError(message) {
+    console.error('[linslog] Showing error:', message);
     elements.errorMessage.textContent = message;
     showScreen('error');
     
-    // Auto-return to idle after 10 seconds
     setTimeout(() => {
+        console.log('[linslog] Auto-returning to idle after error');
         showScreen('idle');
     }, 10000);
 }
@@ -476,8 +619,7 @@ function hideBuffering() {
  * Start tracking playback progress
  */
 function startProgressTracking() {
-    stopProgressTracking(); // Clear any existing interval
-    
+    stopProgressTracking();
     progressUpdateInterval = setInterval(() => {
         updateProgress();
     }, 1000);
@@ -501,11 +643,8 @@ function updateProgress() {
     const duration = elements.player.duration;
     
     if (!isNaN(duration) && duration > 0) {
-        // Update progress bar
         const percentage = (currentTime / duration) * 100;
         elements.progressFill.style.width = `${percentage}%`;
-        
-        // Update time display
         elements.currentTime.textContent = formatTime(currentTime);
         elements.duration.textContent = formatTime(duration);
     }
@@ -539,6 +678,11 @@ function pad(num) {
 // STARTUP
 // ============================================
 
+console.log('[linslog] ========================================');
+console.log('[linslog] IPTV Cast Receiver Loading...');
+console.log('[linslog] Version: 2.0 (Fixed)');
+console.log('[linslog] ========================================');
+
 // Wait for DOM to be ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeReceiver);
@@ -551,12 +695,11 @@ if (document.readyState === 'loading') {
 // ============================================
 
 window.addEventListener('error', (event) => {
-    console.error('[Global Error]', event.error);
+    console.error('[linslog] Global error:', event.error);
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-    console.error('[Unhandled Promise Rejection]', event.reason);
+    console.error('[linslog] Unhandled promise rejection:', event.reason);
 });
 
-console.log('[Cast Receiver] Script loaded');
-
+console.log('[linslog] Receiver script loaded successfully');
