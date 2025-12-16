@@ -94,27 +94,17 @@ function initializeReceiver() {
     // Get player manager
     playerManager = receiverContext.getPlayerManager();
     
-    // CRITICAL FIX: Configure playback config to support all media types
-    const playbackConfig = new cast.framework.PlaybackConfig();
-    
-    // Enable auto-resume and licensing (if needed)
-    playbackConfig.autoResumeDuration = 5;
-    playbackConfig.autoPauseDuration = null;
-    
-    // Set manifest and segment request handlers for HLS/DASH if needed
-    playbackConfig.manifestRequestHandler = null;
-    playbackConfig.segmentRequestHandler = null;
-    
-    // Apply playback configuration
-    playerManager.setPlaybackConfig(playbackConfig);
-    
-    console.log('[linslog] Playback config applied');
+    // CRITICAL FIX: Let Cast SDK handle media playback automatically
+    // Don't override playback config - use defaults
+    console.log('[linslog] Using default playback config');
     
     // Configure supported media commands
-    playerManager.setSupportedMediaCommands(
-        RECEIVER_CONFIG.supportedCommands.reduce((acc, cmd) => acc | cmd, 0),
-        true
-    );
+    const supportedCommands = cast.framework.messages.Command.PAUSE |
+                             cast.framework.messages.Command.SEEK |
+                             cast.framework.messages.Command.STREAM_VOLUME |
+                             cast.framework.messages.Command.STREAM_MUTE;
+    
+    playerManager.setSupportedMediaCommands(supportedCommands, true);
     
     console.log('[linslog] Supported commands configured');
     
@@ -122,11 +112,12 @@ function initializeReceiver() {
     registerPlayerEventListeners();
     registerVideoEventListeners();
     
-    // Start receiver
+    // Start receiver - SDK will automatically use the video element with id="player"
     receiverContext.start(options);
     
     console.log('[linslog] Cast Receiver initialized successfully');
     console.log('[linslog] Receiver Application ID: 80E3032B');
+    console.log('[linslog] Video element will be managed by Cast SDK');
     showScreen('idle');
 }
 
