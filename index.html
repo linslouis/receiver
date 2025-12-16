@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Cast Receiver</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Cast Web Receiver SDK -->
+    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+</head>
+<body>
+    <!-- Main Container -->
+    <div id="app">
+        <!-- Video Element (hidden, positioned absolutely) -->
+        <video id="player" autoplay></video>
+
+        <!-- Idle State -->
+        <div id="idle-screen" class="screen active">
+            <div class="idle-content">
+                <img src="assets/logo.png" alt="IPTV Logo" class="app-logo pulse">
+                <h1 class="idle-title">Ready to Cast</h1>
+                <p class="idle-subtitle">Select content from your device to start</p>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-screen" class="screen">
+            <div class="loading-overlay"></div>
+            <div class="loading-content">
+                <div class="media-poster"></div>
+                <div class="spinner"></div>
+                <h2 class="loading-title"></h2>
+            </div>
+        </div>
+
+        <!-- Playing State -->
+        <div id="playing-screen" class="screen">
+            <!-- Background Poster/Backdrop -->
+            <div class="background-poster"></div>
+            <div class="gradient-overlay"></div>
+
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <img src="assets/logo.png" alt="IPTV" class="top-logo">
+                <div class="live-badge" id="live-badge">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+            </div>
+
+            <!-- Media Info (bottom left) -->
+            <div class="media-info">
+                <div class="channel-logo" id="channel-logo"></div>
+                <h1 class="media-title" id="media-title"></h1>
+                <p class="media-subtitle" id="media-subtitle"></p>
+            </div>
+
+            <!-- Progress Bar (VOD only) -->
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="time-display">
+                    <span id="current-time">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
+            </div>
+
+            <!-- Buffering Overlay -->
+            <div class="buffering-overlay" id="buffering-overlay">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-screen" class="screen">
+            <div class="error-content">
+                <div class="error-icon">⚠</div>
+                <h2 class="error-title">Playback Error</h2>
+                <p class="error-message" id="error-message">Unable to play content</p>
+                <p class="error-hint">Please try selecting content again</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Receiver Script -->
+    <script src="receiver.js"></script>
+</body>
+</html>
+

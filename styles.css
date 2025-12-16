@@ -1,0 +1,425 @@
+/* ============================================
+   IPTV Cast Receiver – Production Styles
+   Dark Cinematic Theme
+   ============================================ */
+
+/* ---- RESET & BASE ---- */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #0B0B0F;
+    color: #FFFFFF;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* ---- VIDEO ELEMENT ---- */
+
+#player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    z-index: 1;
+}
+
+/* ---- SCREEN STATES ---- */
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 10;
+}
+
+.screen.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* ============================================
+   IDLE STATE
+   ============================================ */
+
+#idle-screen {
+    background: linear-gradient(135deg, #0B0B0F 0%, #1A1A2E 100%);
+    align-items: center;
+    justify-content: center;
+}
+
+.idle-content {
+    text-align: center;
+}
+
+.app-logo {
+    width: 200px;
+    height: auto;
+    margin-bottom: 40px;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5));
+}
+
+.pulse {
+    animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+.idle-title {
+    font-size: 64px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+
+.idle-subtitle {
+    font-size: 28px;
+    font-weight: 300;
+    color: #A0A0A8;
+}
+
+/* ============================================
+   LOADING STATE
+   ============================================ */
+
+#loading-screen {
+    background: #0B0B0F;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+}
+
+.loading-content {
+    text-align: center;
+    z-index: 2;
+}
+
+.media-poster {
+    width: 300px;
+    height: 450px;
+    margin: 0 auto 40px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.loading-title {
+    font-size: 48px;
+    font-weight: 600;
+    margin-top: 20px;
+    color: #FFFFFF;
+}
+
+/* ============================================
+   PLAYING STATE
+   ============================================ */
+
+#playing-screen {
+    background: #000;
+}
+
+/* Background Poster */
+.background-poster {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.3);
+    opacity: 0.4;
+    z-index: 2;
+}
+
+.gradient-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: linear-gradient(to top, rgba(11, 11, 15, 1) 0%, transparent 100%);
+    z-index: 3;
+}
+
+/* Top Bar */
+.top-bar {
+    position: absolute;
+    top: 40px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+}
+
+.top-logo {
+    height: 50px;
+    width: auto;
+}
+
+.live-badge {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(220, 38, 38, 0.9);
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.live-badge.active {
+    display: flex;
+}
+
+.live-dot {
+    width: 12px;
+    height: 12px;
+    background: #FFFFFF;
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Media Info */
+.media-info {
+    position: absolute;
+    bottom: 140px;
+    left: 60px;
+    max-width: 60%;
+    z-index: 5;
+}
+
+.channel-logo {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 24px;
+    background-size: contain;
+    background-position: left center;
+    background-repeat: no-repeat;
+    display: none;
+}
+
+.channel-logo.active {
+    display: block;
+}
+
+.media-title {
+    font-size: 56px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.2;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+}
+
+.media-subtitle {
+    font-size: 32px;
+    font-weight: 400;
+    color: #D1D1D6;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* Progress Bar (VOD) */
+.progress-container {
+    position: absolute;
+    bottom: 60px;
+    left: 60px;
+    right: 60px;
+    display: none;
+    z-index: 5;
+}
+
+.progress-container.active {
+    display: block;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #FFFFFF;
+    width: 0%;
+    transition: width 0.3s linear;
+    border-radius: 4px;
+}
+
+.time-display {
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+    color: #D1D1D6;
+    font-weight: 500;
+}
+
+/* Buffering Overlay */
+.buffering-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+}
+
+.buffering-overlay.active {
+    display: flex;
+}
+
+/* ============================================
+   ERROR STATE
+   ============================================ */
+
+#error-screen {
+    background: linear-gradient(135deg, #1A0B0B 0%, #0B0B0F 100%);
+    align-items: center;
+    justify-content: center;
+}
+
+.error-content {
+    text-align: center;
+    max-width: 800px;
+}
+
+.error-icon {
+    font-size: 120px;
+    margin-bottom: 30px;
+    opacity: 0.8;
+}
+
+.error-title {
+    font-size: 52px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #FF6B6B;
+}
+
+.error-message {
+    font-size: 32px;
+    font-weight: 400;
+    color: #D1D1D6;
+    margin-bottom: 12px;
+}
+
+.error-hint {
+    font-size: 24px;
+    font-weight: 300;
+    color: #A0A0A8;
+}
+
+/* ============================================
+   SPINNER
+   ============================================ */
+
+.spinner {
+    width: 80px;
+    height: 80px;
+    border: 6px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 1280px) {
+    .media-title {
+        font-size: 44px;
+    }
+
+    .media-subtitle {
+        font-size: 26px;
+    }
+
+    .idle-title {
+        font-size: 52px;
+    }
+
+    .idle-subtitle {
+        font-size: 24px;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .media-title,
+    .media-subtitle,
+    .idle-title {
+        text-shadow: 0 0 20px rgba(0, 0, 0, 1);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
