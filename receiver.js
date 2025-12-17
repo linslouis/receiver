@@ -1,210 +1,278 @@
 /**
- * LinsIPTV Cast Receiver - AUTHENTICATED STREAMING VERSION
- * Custom Web Receiver with HTTP Header Injection
- * 
- * This receiver implements the solution for casting authenticated HLS streams
- * in networks with AP Isolation by injecting custom HTTP headers into all
- * network requests (manifest and segments).
- * 
- * Based on Google Cast Application Framework (CAF) v3
+ * LinsIPTV Cast Receiver - CAF v3 Compliant with Debug Support
+ * Authenticated HLS streaming with custom HTTP header injection
+ * Chrome Remote Inspector compatible
  */
 
 'use strict';
 
 // ============================================
-// GLOBAL STATE FOR AUTHENTICATION
+// EARLY LOGGING & DEBUG SETUP
 // ============================================
 
-/**
- * Global storage for authentication headers passed from Android sender.
- * These headers are extracted from the LOAD request's customData
- * and injected into every network request made by the player.
- */
+console.log('[BOOT] Receiver JavaScript loaded');
+console.log('[BOOT] CAF SDK available:', typeof cast !== 'undefined');
+console.log('[BOOT] Cast framework available:', typeof cast?.framework !== 'undefined');
+
+// Update debug overlay
+function updateDebugStatus(message, isError = false) {
+    const debugEl = document.getElementById('debug-status');
+    if (debugEl) {
+        debugEl.innerHTML = `<div style="color: ${isError ? '#f00' : '#0f0'}">${message}</div>`;
+    }
+    console.log(message);
+}
+
+// ============================================
+// GLOBAL STATE
+// ============================================
+
 let globalRequestHeaders = {};
+let context = null;
+let playerManager = null;
 
 // ============================================
-// INITIALIZATION
+// CAF INITIALIZATION - MUST RUN IMMEDIATELY
 // ============================================
 
-/**
- * Initialize Cast Receiver with Custom PlaybackConfig for header injection
- */
-function initializeReceiver() {
-    console.log('[LinsIPTV] ========================================');
-    console.log('[LinsIPTV] Authenticated Cast Receiver Initializing...');
-    console.log('[LinsIPTV] Version: 3.0 (Header Injection)');
-    console.log('[LinsIPTV] App ID: 80E3032B');
-    console.log('[LinsIPTV] ========================================');
+console.log('[CAF] Starting initialization...');
+
+try {
+    // Get Cast context instance
+    context = cast.framework.CastReceiverContext.getInstance();
+    console.log('[CAF] ✓ CastReceiverContext obtained');
     
-    // Get Cast context and player manager
-    const context = cast.framework.CastReceiverContext.getInstance();
-    const playerManager = context.getPlayerManager();
+    // Enable Cast Debug Logger if available
+    if (typeof cast.debug !== 'undefined') {
+        cast.debug.CastDebugLogger.getInstance().setEnabled(true);
+        console.log('[CAF] ✓ Debug logger enabled');
+    }
+    
+    // Get player manager
+    playerManager = context.getPlayerManager();
+    console.log('[CAF] ✓ PlayerManager obtained');
     
     // ============================================
-    // STEP 1: INTERCEPT LOAD MESSAGE TO EXTRACT HEADERS
+    // PLAYBACK CONFIG - HEADER INJECTION
+    // ============================================
+    
+    const playbackConfig = new cast.framework.PlaybackConfig();
+    console.log('[CAF] Configuring playback with header injection...');
+    
+    /**
+     * Request modifier - injects authentication headers into all network requests
+     */
+    const injectAuthHeaders = (requestInfo) => {
+        if (Object.keys(globalRequestHeaders).length > 0) {
+            for (const [key, value] of Object.entries(globalRequestHeaders)) {
+                requestInfo.headers[key] = value;
+            }
+            
+            // Log occasionally to avoid spam
+            if (Math.random() < 0.05) {
+                console.log('[NETWORK] Headers injected:', Object.keys(globalRequestHeaders).join(', '));
+            }
+        }
+    };
+    
+    // Apply to all request types
+    playbackConfig.manifestRequestHandler = injectAuthHeaders;
+    playbackConfig.segmentRequestHandler = injectAuthHeaders;
+    playbackConfig.licenseRequestHandler = injectAuthHeaders;
+    
+    console.log('[CAF] ✓ Request handlers configured');
+    
+    // ============================================
+    // MESSAGE INTERCEPTORS
     // ============================================
     
     /**
-     * Message interceptor for LOAD requests.
-     * Extracts authentication headers from customData before playback starts.
+     * LOAD interceptor - extracts authentication headers from customData
      */
     playerManager.setMessageInterceptor(
         cast.framework.messages.MessageType.LOAD,
         (loadRequestData) => {
-            console.log('[LinsIPTV] ========================================');
-            console.log('[LinsIPTV] LOAD REQUEST INTERCEPTED');
-            console.log('[LinsIPTV] ========================================');
+            console.log('[LOAD] ========================================');
+            console.log('[LOAD] Request intercepted');
             
             const media = loadRequestData.media;
             
             if (!media || !media.contentId) {
-                console.error('[LinsIPTV] ❌ Invalid media - no contentId');
+                console.error('[LOAD] ❌ No media or contentId');
                 return loadRequestData;
             }
             
-            console.log('[LinsIPTV] Content URL:', media.contentId);
-            console.log('[LinsIPTV] Content Type:', media.contentType);
-            console.log('[LinsIPTV] Stream Type:', media.streamType);
+            console.log('[LOAD] Content URL:', media.contentId);
+            console.log('[LOAD] Content Type:', media.contentType);
+            console.log('[LOAD] Stream Type:', media.streamType);
             
             // Extract headers from customData
             if (media.customData && media.customData.headers) {
                 globalRequestHeaders = media.customData.headers;
                 
-                console.log('[LinsIPTV] ✓ HEADERS EXTRACTED FROM CUSTOMDATA:');
+                console.log('[LOAD] ✓ HEADERS EXTRACTED:');
                 for (const [key, value] of Object.entries(globalRequestHeaders)) {
-                    // Don't log full tokens for security, just show they exist
                     const displayValue = value.length > 50 ? value.substring(0, 30) + '...' : value;
-                    console.log(`[LinsIPTV]   ${key}: ${displayValue}`);
+                    console.log(`[LOAD]   ${key}: ${displayValue}`);
                 }
                 
-                console.log('[LinsIPTV] ✓ Headers will be injected into ALL network requests');
+                console.log('[LOAD] ✓ Headers will be injected into ALL requests');
+                updateDebugStatus('🟢 Headers extracted - ready to play');
             } else {
-                console.warn('[LinsIPTV] ⚠ No customData.headers found in request');
-                console.warn('[LinsIPTV] ⚠ Stream may fail if authentication required');
+                console.warn('[LOAD] ⚠ No customData.headers found');
+                console.warn('[LOAD] Stream may fail if authentication required');
                 globalRequestHeaders = {};
+                updateDebugStatus('🟡 No auth headers - playing without');
             }
             
-            // Log stream type for debugging
-            const isLive = media.customData && media.customData.isLive;
-            console.log('[LinsIPTV] Stream classification:', isLive ? 'LIVE TV' : 'VOD');
+            // Log stream classification
+            const isLive = media.customData?.isLive || media.streamType === cast.framework.messages.StreamType.LIVE;
+            console.log('[LOAD] Stream type:', isLive ? 'LIVE TV' : 'VOD');
             
-            console.log('[LinsIPTV] ========================================');
+            console.log('[LOAD] ========================================');
             
-            // Return unmodified request (headers are applied in playbackConfig)
             return loadRequestData;
         }
     );
     
-    // ============================================
-    // STEP 2: CONFIGURE PLAYBACK WITH HEADER INJECTION
-    // ============================================
-    
-    const playbackConfig = new cast.framework.PlaybackConfig();
-    
-    /**
-     * Request modifier function that injects authentication headers.
-     * This is called for EVERY network request made by the player.
-     * 
-     * @param {cast.framework.NetworkRequestInfo} requestInfo 
-     */
-    const injectAuthHeaders = (requestInfo) => {
-        // Inject all headers from globalRequestHeaders
-        for (const [key, value] of Object.entries(globalRequestHeaders)) {
-            requestInfo.headers[key] = value;
-        }
-        
-        // Log first few requests for debugging (avoid spam)
-        if (Math.random() < 0.1) { // Log ~10% of requests
-            console.log('[LinsIPTV] 📡 Request:', requestInfo.url.substring(0, 80) + '...');
-            console.log('[LinsIPTV] 📡 Headers injected:', Object.keys(globalRequestHeaders).join(', '));
-        }
-    };
-    
-    /**
-     * CRITICAL: Apply header injection to ALL request types
-     * 
-     * - manifestRequestHandler: Called when player requests .m3u8 playlist
-     * - segmentRequestHandler: Called for every .ts video chunk (most important!)
-     * - licenseRequestHandler: Called for DRM license requests (if applicable)
-     */
-    playbackConfig.manifestRequestHandler = injectAuthHeaders;
-    playbackConfig.segmentRequestHandler = injectAuthHeaders;
-    playbackConfig.licenseRequestHandler = injectAuthHeaders;
-    
-    console.log('[LinsIPTV] ✓ PlaybackConfig configured with header injection');
+    console.log('[CAF] ✓ LOAD interceptor registered');
     
     // ============================================
-    // STEP 3: REGISTER EVENT LISTENERS
+    // EVENT LISTENERS
     // ============================================
     
-    // Listen for playback errors
+    // ERROR events
     playerManager.addEventListener(
         cast.framework.events.EventType.ERROR,
         (event) => {
-            console.error('[LinsIPTV] ❌ PLAYBACK ERROR:', event.detailedErrorCode);
-            console.error('[LinsIPTV] Error details:', event);
+            console.error('[ERROR] ❌ Playback error:', event.detailedErrorCode);
+            console.error('[ERROR] Details:', event);
             
-            // Check if it's an authentication error
+            // Check for auth errors
             if (event.detailedErrorCode && 
                 (event.detailedErrorCode.includes('403') || 
                  event.detailedErrorCode.includes('401'))) {
-                console.error('[LinsIPTV] ❌ AUTHENTICATION FAILURE');
-                console.error('[LinsIPTV] Headers may be missing or invalid');
-                console.error('[LinsIPTV] Current headers:', Object.keys(globalRequestHeaders));
+                console.error('[ERROR] ❌ AUTHENTICATION FAILURE');
+                console.error('[ERROR] Headers may be missing or invalid');
+                console.error('[ERROR] Current headers:', Object.keys(globalRequestHeaders));
+                updateDebugStatus('🔴 Auth Error - Check headers', true);
+            } else {
+                updateDebugStatus('🔴 Playback Error - See console', true);
             }
         }
     );
     
-    // Listen for successful load
+    // LOAD COMPLETE
     playerManager.addEventListener(
         cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
         () => {
-            console.log('[LinsIPTV] ✓ Media loaded successfully');
+            console.log('[PLAYER] ✓ Media loaded successfully');
+            updateDebugStatus('🟢 Media loaded');
         }
     );
     
-    // Listen for playing state
+    // MEDIA STATUS (for state tracking)
     playerManager.addEventListener(
         cast.framework.events.EventType.MEDIA_STATUS,
         (event) => {
             const state = event.playerState;
+            
             if (state === cast.framework.messages.PlayerState.PLAYING) {
-                console.log('[LinsIPTV] ✓ PLAYBACK STARTED - Stream is playing!');
+                console.log('[PLAYER] ✓ PLAYBACK STARTED - Stream is playing!');
+                updateDebugStatus('🟢 Playing');
             } else if (state === cast.framework.messages.PlayerState.BUFFERING) {
-                console.log('[LinsIPTV] ⏳ Buffering...');
+                console.log('[PLAYER] ⏳ Buffering...');
+                updateDebugStatus('🟡 Buffering...');
+            } else if (state === cast.framework.messages.PlayerState.IDLE) {
+                console.log('[PLAYER] ⚪ IDLE');
+                updateDebugStatus('⚪ Idle');
+            } else if (state === cast.framework.messages.PlayerState.PAUSED) {
+                console.log('[PLAYER] ⏸ PAUSED');
+                updateDebugStatus('🟡 Paused');
             }
         }
     );
     
-    console.log('[LinsIPTV] ✓ Event listeners registered');
+    // READY event (receiver fully initialized)
+    context.addEventListener(
+        cast.framework.system.EventType.READY,
+        () => {
+            console.log('[CAF] ========================================');
+            console.log('[CAF] ✓✓✓ RECEIVER READY ✓✓✓');
+            console.log('[CAF] App ID: 80E3032B');
+            console.log('[CAF] Version: 3.0 (Authenticated)');
+            console.log('[CAF] ========================================');
+            updateDebugStatus('🟢 Receiver Ready - Waiting for content');
+        }
+    );
+    
+    console.log('[CAF] ✓ Event listeners registered');
     
     // ============================================
-    // STEP 4: START RECEIVER
+    // START RECEIVER - CRITICAL
     // ============================================
     
-    // Configure receiver options
     const options = new cast.framework.CastReceiverOptions();
     options.maxInactivity = 3600; // 1 hour
     options.statusText = 'LinsIPTV Ready';
     
-    // Start with our custom playbackConfig
+    console.log('[CAF] Starting receiver with options...');
+    console.log('[CAF] Max inactivity:', options.maxInactivity);
+    
+    // START - This makes receiver inspectable!
     context.start({ playbackConfig: playbackConfig });
     
-    console.log('[LinsIPTV] ========================================');
-    console.log('[LinsIPTV] ✓ RECEIVER STARTED SUCCESSFULLY');
-    console.log('[LinsIPTV] Ready to receive authenticated streams');
-    console.log('[LinsIPTV] ========================================');
+    console.log('[CAF] ========================================');
+    console.log('[CAF] ✓✓✓ CONTEXT.START() CALLED ✓✓✓');
+    console.log('[CAF] Receiver should now be inspectable');
+    console.log('[CAF] Check: chrome://inspect/#devices');
+    console.log('[CAF] ========================================');
+    
+    updateDebugStatus('🟢 CAF Started - Ready for inspection');
+    
+} catch (error) {
+    console.error('[CAF] ❌ FATAL ERROR during initialization:', error);
+    console.error('[CAF] Stack:', error.stack);
+    updateDebugStatus('🔴 FATAL: ' + error.message, true);
+    
+    // Try to display error on screen
+    document.body.innerHTML = `
+        <div style="color: red; padding: 50px; font-size: 24px;">
+            <h1>Receiver Initialization Failed</h1>
+            <p>${error.message}</p>
+            <pre>${error.stack}</pre>
+        </div>
+    `;
 }
 
 // ============================================
-// STARTUP
+// LOGGING HELPERS
 // ============================================
 
-// Wait for DOM to be ready, then initialize
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeReceiver);
-} else {
-    initializeReceiver();
-}
+// Log all console methods for visibility
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
 
-console.log('[LinsIPTV] Receiver script loaded');
+console.log = function(...args) {
+    originalLog.apply(console, args);
+};
+
+console.error = function(...args) {
+    originalError.apply(console, args);
+};
+
+console.warn = function(...args) {
+    originalWarn.apply(console, args);
+};
+
+// ============================================
+// FINAL BOOT LOG
+// ============================================
+
+console.log('[BOOT] ========================================');
+console.log('[BOOT] Receiver script execution complete');
+console.log('[BOOT] CAF initialized:', context !== null);
+console.log('[BOOT] PlayerManager available:', playerManager !== null);
+console.log('[BOOT] Ready for Cast sessions');
+console.log('[BOOT] ========================================');
