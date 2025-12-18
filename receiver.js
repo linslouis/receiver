@@ -180,12 +180,26 @@ try {
             if (state === cast.framework.messages.PlayerState.PLAYING) {
                 console.log('[PLAYER] ✓ PLAYBACK STARTED - Stream is playing!');
                 updateDebugStatus('🟢 Playing');
+                
+                // Hide idle screen when playback starts
+                const idleScreen = document.getElementById('idle-screen');
+                if (idleScreen) {
+                    idleScreen.classList.add('hidden');
+                    console.log('[UI] ✓ Idle screen hidden');
+                }
             } else if (state === cast.framework.messages.PlayerState.BUFFERING) {
                 console.log('[PLAYER] ⏳ Buffering...');
                 updateDebugStatus('🟡 Buffering...');
             } else if (state === cast.framework.messages.PlayerState.IDLE) {
                 console.log('[PLAYER] ⚪ IDLE');
                 updateDebugStatus('⚪ Idle');
+                
+                // Show idle screen when playback ends
+                const idleScreen = document.getElementById('idle-screen');
+                if (idleScreen) {
+                    idleScreen.classList.remove('hidden');
+                    console.log('[UI] ✓ Idle screen shown');
+                }
             } else if (state === cast.framework.messages.PlayerState.PAUSED) {
                 console.log('[PLAYER] ⏸ PAUSED');
                 updateDebugStatus('🟡 Paused');
