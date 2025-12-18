@@ -1,59 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinsIPTV Cast Receiver</title>
-    
-    <!-- CAF v3 SDK - CRITICAL: Load before any receiver code -->
+
+    <!-- CAF v3 SDK -->
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
-    
-    <!-- Cast Debug Logger (Development) -->
     <script src="//www.gstatic.com/cast/sdk/libs/devtools/debug_layer/caf_receiver_logger.js"></script>
-    
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            overflow: hidden;
-            font-family: 'Roboto', sans-serif;
-        }
-        
-        #player {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .debug-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            color: #0f0;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 14px;
-            z-index: 1000;
-            max-width: 400px;
-            border-radius: 5px;
-        }
-    </style>
+
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- CAF Media Player Element -->
-    <cast-media-player id="player"></cast-media-player>
-    
-    <!-- Debug Status Overlay -->
-    <div class="debug-overlay" id="debug-status">
-        <div>🔴 Initializing receiver...</div>
+    <div id="app">
+        <!-- CAF Media Player -->
+        <cast-media-player id="player"></cast-media-player>
+
+        <!-- IDLE SCREEN -->
+        <div id="idle-screen" class="screen active">
+            <div class="idle-content">
+                <img src="assets/logo.png" alt="IPTV Logo" class="app-logo pulse">
+                <h1 class="idle-title">Ready to Cast</h1>
+                <p class="idle-subtitle">Select content from your device to start</p>
+            </div>
+        </div>
     </div>
-    
-    <!-- Receiver Logic - Loaded AFTER CAF SDK -->
+
+    <!-- Receiver Logic -->
     <script src="receiver.js"></script>
 </body>
 </html>
-
