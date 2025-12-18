@@ -1,32 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinsIPTV Cast Receiver</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinsIPTV Cast Receiver</title>
 
-    <!-- CAF v3 SDK -->
-    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
-    <script src="//www.gstatic.com/cast/sdk/libs/devtools/debug_layer/caf_receiver_logger.js"></script>
+<script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 
-    <link rel="stylesheet" href="styles.css">
+<script>
+if (window.cast && window.cast.__platform__) {
+  const s = document.createElement('script');
+  s.src = '//www.gstatic.com/cast/sdk/libs/devtools/debug_layer/caf_receiver_logger.js';
+  document.head.appendChild(s);
+}
+</script>
+
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
-        <!-- CAF Media Player -->
-        <cast-media-player id="player"></cast-media-player>
+<div id="app">
+  <cast-media-player id="player"></cast-media-player>
 
-        <!-- IDLE SCREEN -->
-        <div id="idle-screen" class="screen active">
-            <div class="idle-content">
-                <img src="assets/logo.png" alt="IPTV Logo" class="app-logo pulse">
-                <h1 class="idle-title">Ready to Cast</h1>
-                <p class="idle-subtitle">Select content from your device to start</p>
-            </div>
-        </div>
+  <div id="idle-screen" class="screen active">
+    <div class="idle-content">
+      <h1 style="color:white">Ready to Cast</h1>
     </div>
+  </div>
+</div>
 
-    <!-- Receiver Logic -->
-    <script src="receiver.js"></script>
+<script src="receiver.js"></script>
 </body>
 </html>
